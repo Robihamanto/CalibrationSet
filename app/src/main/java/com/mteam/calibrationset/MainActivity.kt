@@ -242,6 +242,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sensorManager.unregisterListener(this)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        writeCsvFile()
+    }
+
     fun setupSensor() {
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
