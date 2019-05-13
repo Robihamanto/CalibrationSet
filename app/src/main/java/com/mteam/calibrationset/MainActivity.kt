@@ -39,11 +39,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     var currentTouchPreassure = 0.0
     var currentTouchSize = 0.0
 
+    val timer = Timer()
     var isTimer = false
+    var isShouldSaveFile = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        requestWriteExternalPermission()
         setupSensor()
         setupUI()
         timer()
@@ -51,12 +54,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     fun stateButtonDidTap(view: View) {
         isTimer = !isTimer
+        if (isShouldSaveFile == false) {
+            isShouldSaveFile = true
+        } else {
+            writeCsvFile()
+            isShouldSaveFile = false
+        }
     }
 
     fun timer(){
         var count = 1
 
-        val timer = Timer()
         //Set the schedule function
         timer.scheduleAtFixedRate(
             object : TimerTask() {
@@ -244,7 +252,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        writeCsvFile()
+        timer.cancel()
+        isTimer = false
     }
 
     fun setupSensor() {
@@ -286,6 +295,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // Should we show an explanation?
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                val dir = File("/sdcard/calibrationset/").mkdirs()
                 // Show an explanation to the user *asynchronously* -- don't block
                 // this thread waiting for the user's response! After the user
                 // sees the explanation, try again to request the permission.
@@ -297,6 +307,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 // result of the request.
             }
         } else {
+            val dir = File("/sdcard/calibrationset/").mkdirs()
             println("User Permission Granted yeay 🎉")
         }
     }
@@ -310,11 +321,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     fun writeCsvFile() {
         val CSV_HEADER = "Pitch,Roll,Azimuth,RawX,RawY,TouchPreassure,TouchSize"
         var fileWriter: FileWriter? = null
-
         try {
             val currentTime = getCurrentTime().toString()
-            val dir = File("/sdcard/collector/").mkdirs()
-            fileWriter = FileWriter(File("/sdcard/collector/", "CollectorRawData_${currentTime}.csv"))
+            val dir = File("/sdcard/calibrationset/").mkdirs()
+            fileWriter = FileWriter(File("/sdcard/calibrationset/", "CollectorRawData_${currentTime}.csv"))
             fileWriter.append(CSV_HEADER)
             fileWriter.append('\n')
             for (data in rawData) {
