@@ -40,8 +40,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     var currentTouchSize = 0.0
 
     val timer = Timer()
-    var isTimer = false
+    var isCollecting = false
     var isShouldSaveFile = false
+    var now = -5
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,11 +54,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     fun stateButtonDidTap(view: View) {
-        isTimer = !isTimer
+        isCollecting = !isCollecting
         if (isShouldSaveFile == false) {
             isShouldSaveFile = true
         } else {
-            writeCsvFile()
             isShouldSaveFile = false
         }
     }
@@ -69,15 +69,44 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         timer.scheduleAtFixedRate(
             object : TimerTask() {
                 override fun run() {
-                    if (isTimer) {
-                        addRecordData(false)
-                        //println("This is ${count++}")
-                    }
+                    now += 1
+                    println("now: ${now}")
+                    checkTime()
+                    addData()
+
                 }
             },
             0, 1000
         )
+    }
 
+    fun addData() {
+        if (isCollecting == true) {
+            addRecordData(false) //record data
+        }
+    }
+
+    fun checkTime() {
+        when {
+            now == 0 ->
+                isCollecting = true
+            now == 10 ->
+                isCollecting = false
+            now == 11 ->
+                writeCsvFile()
+            now == 1800 ->
+                isCollecting = true
+            now == 1840 ->
+                isCollecting = false
+            now == 1841 ->
+                writeCsvFile()
+            now == 3600 ->
+                isCollecting = true
+            now == 3640 ->
+                isCollecting = false
+            now == 3641 ->
+                writeCsvFile()
+        }
     }
 
     fun setupUI() {
@@ -102,7 +131,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     fun changeTextMainButton() {
-        if (isTimer) {
+        if (isCollecting) {
             stateButton.text = "End Collecting"
         } else {
             stateButton.text = "Start Collecting"
@@ -110,7 +139,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     fun hideManualButton() {
-        if (isTimer) {
+        if (isCollecting) {
             testButton1.setVisibility(View.INVISIBLE)
             testButton2.setVisibility(View.INVISIBLE)
             testButton3.setVisibility(View.INVISIBLE)
@@ -253,7 +282,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         timer.cancel()
-        isTimer = false
+        isCollecting = false
     }
 
     fun setupSensor() {
