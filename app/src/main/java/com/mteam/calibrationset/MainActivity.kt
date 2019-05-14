@@ -2,6 +2,7 @@ package com.mteam.calibrationset
 
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -11,9 +12,9 @@ import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
-import android.view.MotionEvent
-import android.view.VelocityTracker
-import android.view.View
+import android.support.v7.app.AlertDialog
+import android.view.*
+import android.widget.Toast
 import com.mteam.calibrationset.Model.RawData
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
@@ -42,7 +43,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     val timer = Timer()
     var isCollecting = false
     var isShouldSaveFile = false
-    var now = -5
+    var now = -3
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,20 +51,57 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         requestWriteExternalPermission()
         setupSensor()
         setupUI()
-        timer()
+        registerForContextMenu(stateButton)
     }
 
     fun stateButtonDidTap(view: View) {
-        isCollecting = !isCollecting
-        if (isShouldSaveFile == false) {
-            isShouldSaveFile = true
-        } else {
-            isShouldSaveFile = false
+        openContextMenu(stateButton)
+    }
+
+    override fun onCreateContextMenu(menu: ContextMenu?, v: View?, menuInfo: ContextMenu.ContextMenuInfo?) {
+        super.onCreateContextMenu(menu, v, menuInfo)
+        menu?.setHeaderTitle("Collecting 60 Sensor Raw Data with interval 30 minute")
+        menu?.add(0, v?.id!!, 0, "Now")
+        menu?.add(0, v?.id!!, 0, "1 Minute")
+    }
+
+    override fun onContextItemSelected(item: MenuItem?): Boolean {
+        when {
+            item?.title.toString().toLowerCase() == "NOW".toLowerCase() -> {
+                Toast.makeText(this, "Start collecting now", Toast.LENGTH_SHORT).show()
+                now = -3
+                timer()
+                return true
+            }
+            item?.title.toString().toLowerCase() == "1 Minute".toLowerCase() -> {
+                Toast.makeText(this, "Start collecting in 1 minute from now", Toast.LENGTH_SHORT).show()
+                now = 60
+                timer()
+                return true
+            }
+            else -> return super.onContextItemSelected(item)
+        }
+    }
+
+    fun showAlert() {
+        val builder = AlertDialog.Builder(this)
+        with(builder) {
+            setTitle("Complete")
+            setMessage("Collecting data has been completed")
+            setPositiveButton("OK") { dialog, which ->
+
+            }
+        }
+
+        this.runOnUiThread {
+            builder.show()
         }
     }
 
     fun timer(){
         var count = 1
+
+        isCollecting = true
 
         //Set the schedule function
         timer.scheduleAtFixedRate(
@@ -86,26 +124,34 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    var row = 60 //60 rows
+    var interval = 1800 //1800 seconds / 30 minutes
+
     fun checkTime() {
         when {
             now == 0 ->
                 isCollecting = true
-            now == 10 ->
+            now == 0 + row ->
                 isCollecting = false
-            now == 11 ->
+            now == 0 + row + 1->
                 writeCsvFile()
-            now == 1800 ->
+            now == interval ->
                 isCollecting = true
-            now == 1840 ->
+            now == interval + row ->
                 isCollecting = false
-            now == 1841 ->
+            now == interval + row + 1 ->
                 writeCsvFile()
-            now == 3600 ->
+            now == interval * 2 ->
                 isCollecting = true
-            now == 3640 ->
+            now == interval * 2 + row ->
                 isCollecting = false
-            now == 3641 ->
+            now == interval * 2 + row + 1 ->
                 writeCsvFile()
+            now == interval * 2 + row + 2 -> {
+                isCollecting = false
+                timer.cancel()
+                showAlert()
+            }
         }
     }
 
@@ -324,7 +370,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // Should we show an explanation?
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                val dir = File("/sdcard/calibrationset/").mkdirs()
                 // Show an explanation to the user *asynchronously* -- don't block
                 // this thread waiting for the user's response! After the user
                 // sees the explanation, try again to request the permission.
