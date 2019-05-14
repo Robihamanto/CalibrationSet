@@ -135,6 +135,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 isCollecting = false
             now == 0 + row + 1-> {
                 writeCsvFile()
+                showAlert()
                 timer.cancel()
                 timer.purge()
             }
@@ -342,7 +343,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onResume() {
         super.onResume()
         mLight.also { light ->
-            sensorManager.registerListener(this, light, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, light, SensorManager.SENSOR_DELAY_FASTEST)
         }
     }
 
