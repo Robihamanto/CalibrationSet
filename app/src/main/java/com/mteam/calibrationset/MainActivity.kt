@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     var currentTimeString = ""
 
-    val timer = Timer()
+    var timer = Timer()
     var isCollecting = false
     var isShouldSaveFile = false
     var now = -3
@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     fun timer(){
         var count = 1
-
+        timer = Timer()
         //Set the schedule function
         timer.scheduleAtFixedRate(
             object : TimerTask() {
@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    var row = 10 //60 rows
+    var row = 100 //60 rows
     var interval = 120 //1800 seconds / 30 minutes
 
     fun checkTime() {
@@ -136,6 +136,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             now == 0 + row + 1-> {
                 writeCsvFile()
                 timer.cancel()
+                timer.purge()
             }
             now == interval ->
                 isCollecting = true
@@ -152,6 +153,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             now == interval * 2 + row + 2 -> {
                 isCollecting = false
                 timer.cancel()
+                timer.purge()
                 showAlert()
             }
         }
@@ -352,6 +354,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         timer.cancel()
+        timer.purge()
         isCollecting = false
     }
 
