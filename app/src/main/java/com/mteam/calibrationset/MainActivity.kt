@@ -40,6 +40,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     var currentTouchPreassure = 0.0
     var currentTouchSize = 0.0
 
+    var currentTimeString = ""
+
     val timer = Timer()
     var isCollecting = false
     var isShouldSaveFile = false
@@ -69,13 +71,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         when {
             item?.title.toString().toLowerCase() == "NOW".toLowerCase() -> {
                 Toast.makeText(this, "Start collecting now", Toast.LENGTH_SHORT).show()
-                now = -3
+                now = -5
                 timer()
                 return true
             }
             item?.title.toString().toLowerCase() == "1 Minute".toLowerCase() -> {
                 Toast.makeText(this, "Start collecting in 1 minute from now", Toast.LENGTH_SHORT).show()
-                now = 60
+                now = -60
                 timer()
                 return true
             }
@@ -101,8 +103,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     fun timer(){
         var count = 1
 
-        isCollecting = true
-
         //Set the schedule function
         timer.scheduleAtFixedRate(
             object : TimerTask() {
@@ -124,8 +124,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    var row = 60 //60 rows
-    var interval = 1800 //1800 seconds / 30 minutes
+    var row = 10 //60 rows
+    var interval = 120 //1800 seconds / 30 minutes
 
     fun checkTime() {
         when {
@@ -133,8 +133,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 isCollecting = true
             now == 0 + row ->
                 isCollecting = false
-            now == 0 + row + 1->
+            now == 0 + row + 1-> {
                 writeCsvFile()
+                timer.cancel()
+            }
             now == interval ->
                 isCollecting = true
             now == interval + row ->
@@ -179,8 +181,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     fun changeTextMainButton() {
         if (isCollecting) {
             stateButton.text = "End Collecting"
+            saveButton.setVisibility(View.INVISIBLE)
         } else {
             stateButton.text = "Start Collecting"
+            saveButton.setVisibility(View.VISIBLE)
         }
     }
 
@@ -198,6 +202,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             testButton4.setVisibility(View.VISIBLE)
             testButton5.setVisibility(View.VISIBLE)
         }
+    }
+
+    fun testButton1DidTap(view: View) {
+        hideStateButton(true)
+    }
+
+    fun hideStateButton(isHidden: Boolean) {
+        if (isHidden) {
+            stateButton.setVisibility(View.INVISIBLE)
+        } else {
+            stateButton.setVisibility(View.VISIBLE)
+        }
+    }
+
+    fun saveButtonDidTap(view: View) {
+        writeCsvFile()
+        hideStateButton(false)
     }
 
     private val DEBUG_TAG = "Velocity"
@@ -274,7 +295,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             0.0,
             0.0,
             0.0,
-            0.0
+            0.0,
+            ""
         )
 
 
@@ -286,7 +308,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 currentRawX,
                 currentRawY,
                 currentTouchPreassure,
-                currentTouchSize
+                currentTouchSize,
+                currentTimeString
             )
         } else {
             data = RawData(
@@ -296,7 +319,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 0.0,
                 0.0,
                 0.0,
-                0.0
+                0.0,
+                currentTimeString
             )
         }
 
@@ -304,7 +328,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "Raw data collected for touch " +
                     "RawX: ${data.rawX} RawY: ${data.rawY} " +
                     "Pitch: ${data.pitch} Roll: ${data.roll} Azimuth: ${data.azimuth} " +
-                    "Touch Preassure: ${data.touchPreassure} Touch Size: ${data.touchSize}"
+                    "Touch Preassure: ${data.touchPreassure} Touch Size: ${data.touchSize} Time: ${currentTimeString}"
         )
 
         rawData += data
@@ -348,6 +372,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         currentY = event?.values?.get(1)?.toDouble() ?: 0.0
         currentZ = event?.values?.get(2)?.toDouble() ?: 0.0
 
+        updateCurrentTimeString()
         setupUI()
     }
 
@@ -392,6 +417,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         return currentDate
     }
 
+    fun updateCurrentTimeString() {
+        currentTimeString = getCurrentTime().toString()
+    }
+
     fun writeCsvFile() {
         val CSV_HEADER = "Pitch,Roll,Azimuth,RawX,RawY,TouchPreassure,TouchSize"
         var fileWriter: FileWriter? = null
@@ -402,7 +431,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             fileWriter.append(CSV_HEADER)
             fileWriter.append('\n')
             for (data in rawData) {
-                println("Write ${data.pitch}, ${data.roll}, ${data.azimuth}, ${data.rawX}, ${data.rawX}, ${data.rawY}, ${data.touchPreassure}, ${data.touchSize}")
+                println("Write ${data.pitch}, ${data.roll}, ${data.azimuth}, ${data.rawX}, ${data.rawX}, ${data.rawY}, ${data.touchPreassure}, ${data.touchSize}, ${data.time}")
                 fileWriter.append("${data.pitch}")
                 fileWriter.append(',')
                 fileWriter.append("${data.roll}")
@@ -416,9 +445,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 fileWriter.append("${data.touchPreassure}")
                 fileWriter.append(',')
                 fileWriter.append("${data.touchSize}")
+                fileWriter.append(',')
+                fileWriter.append("${data.time}")
                 fileWriter.append('\n')
             }
+
+            this.runOnUiThread {
+                Toast.makeText(this, "Write CSV successfully", Toast.LENGTH_LONG).show()
+            }
             println("Write CSV successfully!")
+            rawData = listOf<RawData>()
         } catch (e: Exception) {
             println("Writing CSV error!")
             e.printStackTrace()
